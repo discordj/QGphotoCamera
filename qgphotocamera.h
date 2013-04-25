@@ -5,7 +5,11 @@
 #include <QRegExp>
 #include <QDir>
 #include <QFile>
-
+#include <QPixmap>
+#include <QBuffer>
+#include <QMutex>
+#include <QXmlStreamReader>
+#include <QXmlStreamAttributes>
 #include "qgphotocamera_global.h"
 
 class QGPHOTOCAMERASHARED_EXPORT QGphotoCamera : public QCamera
@@ -16,7 +20,7 @@ public:
     QGphotoCamera();
 
     int QCConnect();
-    int QCDisconnect(){}
+    int QCDisconnect(){ return 1;}
 
     void capture(int seconds=0);
     void setbulbmode(bool bulb){}
@@ -36,17 +40,19 @@ public:
     void setImageFilePrefix(QString imagenameprefix){_nameprefix = imagenameprefix;}
 
 
-    void toggleLiveView(bool onoff){}
+    void toggleLiveView(bool onoff);
 
     int batteryLevel();
 
-    bool hasBulbMode(){return false; }
+    bool hasBulbMode(){if(_gpsettings["hasBulb"] == "true") return true; else return false; }
     virtual bool canSetBulbMode(){return false; }
-    virtual bool hasLiveView(){return true;}
+    virtual bool hasLiveView(){if(_gpsettings["hasLiveView"] == "true") return true; else return false;}
     virtual bool canStreamLiveView() {return true; }
-    void initializeLiveView(){}
-    QPixmap *getLiveViewImage(){ return 0;}
-    void endLiveView(){}
+    void initializeLiveView();
+    QPixmap *getLiveViewImage();
+    void endLiveView();
+
+
 
     virtual void lockUI(){}
     virtual void unlockUI(){}
@@ -57,6 +63,8 @@ public:
     void set_gpcontext(GPContext *context) { _gpcontext = context; }
     void set_model(QString model){ _model = model; }
     void set_identifier(QString identifier) { _identifier = identifier; }
+
+
 
 protected:
     virtual void notifypropertychanged(QCameraProperties::QCameraPropertyTypes prop, QVariant value){emit camera_property_changed(prop, value);}
@@ -73,6 +81,16 @@ private:
     int _lookup_widget(CameraWidget*widget, const char *key, CameraWidget **child);
     QCameraProperty *gpconfigtocameraproperty(QString propName, char *config);
 
+    QTimer *_lvTimer;
+    bool _liveViewReady;
+
+    QMutex _lvMutex;
+
+    QMap<QString,QString> _gpsettings;
+
+    void getSettingsInfo();
+    void initializeCanonLV();
+    void endCanonLV();
 };
 
 #endif // QGPHOTOCAMERA_H

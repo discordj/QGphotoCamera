@@ -28,3 +28,6 @@ unix:!symbian {
     }
     INSTALLS += target
 }
+
+OTHER_FILES += \
+    gpcameras.xml

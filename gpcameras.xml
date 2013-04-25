@@ -1,0 +1,20 @@
+<cameras>
+<camera model='Canon EOS 450D (PTP mode)'>
+        <setting id='whitebalance'>whitebalance</setting>
+        <setting id='aperture'>aperture</setting>
+        <setting id='shutterspeed'>shutterspeed</setting>
+        <setting id='iso'>iso</setting>
+        <setting id='imagequality'>imagequality</setting>
+        <setting id='hasLiveView'>true</setting>
+        <setting id='lvType'>canon</setting>
+</camera>
+<camera model='Nikon DSC D80 (PTP mode)'>
+        <setting id='whitebalance'>whitebalance</setting>
+        <setting id='aperture'>f-number</setting>
+        <setting id='shutterspeed'>shutterspeed2</setting>
+        <setting id='iso'>iso</setting>
+        <setting id='imagequality'>imageformat</setting>
+        <setting id='hasLiveView'>false</setting>
+</camera>
+</cameras>
+

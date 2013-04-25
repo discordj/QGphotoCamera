@@ -10,7 +10,9 @@ QGphotoCamera::QGphotoCamera()
 }
 
 int QGphotoCamera::QCConnect(){
+    getSettingsInfo();
     getCameraProperties();
+    return 1;
 }
 
 QCameraProperty *QGphotoCamera::getCameraProperty(QCameraProperties::QCameraPropertyTypes prop){
@@ -31,27 +33,23 @@ QCameraProperties *QGphotoCamera::getCameraProperties(){
 QCameraProperties *QGphotoCamera::getallproperties(){
     QCameraProperties *props = new QCameraProperties();
 
-    QCameraProperty *camProp = gpconfigtocameraproperty(QString("Resolutions"), "imagequality");
+    QCameraProperty *camProp = gpconfigtocameraproperty(QString("Resolutions"), _gpsettings["imagequality"].toLatin1().data());
 
-
-    if(0 == camProp)
-        camProp = gpconfigtocameraproperty(QString("Resolutions"), "imageformat");
 
     props->addProperty(QCameraProperties::ResolutionMode, camProp);
 
-    camProp = gpconfigtocameraproperty(QString("Aperture"), "aperture");
-    if( 0 == camProp)
-            camProp = gpconfigtocameraproperty(QString("Aperture"), "f-number");
+    camProp = gpconfigtocameraproperty(QString("Aperture"), _gpsettings["aperture"].toLatin1().data());
+
 
     props->addProperty(QCameraProperties::Aperture, camProp);
 
-    camProp = gpconfigtocameraproperty(QString("Exposures"), "shutterspeed");
+    camProp = gpconfigtocameraproperty(QString("Exposures"), _gpsettings["shutterspeed"].toLatin1().data());
     props->addProperty(QCameraProperties::ExposureTimes, camProp);
 
-    camProp = gpconfigtocameraproperty(QString("ExposuresWhiteBalance"), "WhiteBalance");
+    camProp = gpconfigtocameraproperty(QString("ExposuresWhiteBalance"), _gpsettings["whitebalance"].toLatin1().data());
     props->addProperty(QCameraProperties::WhiteBalanceMode, camProp);
 
-    camProp = gpconfigtocameraproperty(QString("Iso"), "iso");
+    camProp = gpconfigtocameraproperty(QString("Iso"), _gpsettings["iso"].toLatin1().data());
     props->addProperty(QCameraProperties::Iso, camProp);
 
     return props;
@@ -60,7 +58,7 @@ QCameraProperties *QGphotoCamera::getallproperties(){
 
 QCameraProperty *QGphotoCamera::gpconfigtocameraproperty(QString propName, char *config){
     QCameraProperty *camProp = new QCameraProperty(propName);
-
+    qDebug(qPrintable(QString("Getting config for %0").arg(config)));
    CameraWidget *widget = NULL;
     int ret = gp_camera_get_config (_gpcamera, &widget, _gpcontext);
     if (ret < GP_OK) {
@@ -92,8 +90,10 @@ QCameraProperty *QGphotoCamera::gpconfigtocameraproperty(QString propName, char 
 //        if(strcmp(label, val) == 0){
 //                camProp->setCurrentValue(i);
 //            }
-        qDebug(qPrintable(QString("choice is %0").arg(label)));
-        camProp->appendValue(QString(label),QString(label));
+        if(cret = GP_OK){
+            qDebug(qPrintable(QString("choice is %0").arg(label)));
+            camProp->appendValue(QString(label),QString(label));
+        }
     }
 
 
@@ -115,23 +115,20 @@ void QGphotoCamera::setCameraProperty(QCameraProperties::QCameraPropertyTypes pr
 
     switch(prop){
         case QCameraProperties::ResolutionMode:
-        ret = _lookup_widget(widget, "imagequality", & child);
-         if(ret < GP_OK)
-                ret = _lookup_widget(widget, "imageformat", &child);
+        ret = _lookup_widget(widget, _gpsettings["imagequality"].toLatin1().data(), & child);
+
         break;
         case QCameraProperties::Aperture:
-                ret = _lookup_widget(widget, "aperture", &child);
-            if(ret < GP_OK)
-                ret = _lookup_widget(widget, "f-number",  &child);
+                ret = _lookup_widget(widget, _gpsettings["aperture"].toLatin1().data(), &child);
                 break;
         case QCameraProperties::ExposureTimes:
-            ret = _lookup_widget(widget, "shutterspeed", &child);
+            ret = _lookup_widget(widget, _gpsettings["shutterspeed"].toLatin1().data(), &child);
             break;
         case QCameraProperties::WhiteBalanceMode:
-            ret = _lookup_widget(widget, "whitebalance", &child);
+            ret = _lookup_widget(widget, _gpsettings["whitebalance"].toLatin1().data(), &child);
             break;
         case QCameraProperties::Iso:
-            ret=_lookup_widget(widget, "iso", &child);
+            ret=_lookup_widget(widget, _gpsettings["iso"].toLatin1().data(), &child);
             break;
     }
 
@@ -193,6 +190,7 @@ void QGphotoCamera::capture(int seconds){
     bool isRaw = false;
     int retval;
 
+    if(_liveViewReady) endLiveView();
      // this was done in the libphoto2 example code, but doesn't seem to be necessary
      // NOP: This gets overridden in the library to /capt0000.jpg
      //snprintf(camera_file_path.folder, 1024, "/");
@@ -201,8 +199,9 @@ void QGphotoCamera::capture(int seconds){
      // take a shot
      retval = gp_camera_capture(_gpcamera, GP_CAPTURE_IMAGE, &camera_file_path, _gpcontext);
 
-     if (retval) {
+     if (retval < GP_OK) {
       // do some error handling, probably return from this function
+    return;
      }
 
 
@@ -228,6 +227,7 @@ void QGphotoCamera::capture(int seconds){
 
      if (retval) {
       // error handling
+         return;
      }
 
      // copy picture from camera
@@ -235,14 +235,15 @@ void QGphotoCamera::capture(int seconds){
 
      if (retval) {
       // error handling
+         return;
      }
 
-     printf("Deleting\n");
      // remove picture from camera memory
      retval = gp_camera_file_delete(_gpcamera, camera_file_path.folder, camera_file_path.name, _gpcontext);
 
      if (retval) {
       // error handling
+
      }
 
      // free CameraFile object
@@ -276,7 +277,7 @@ void QGphotoCamera::capture(int seconds){
      {
          //Do raw processing
          DcRImage dcraw;
-    qDebug("Conducting Raw Processing");
+         qDebug("Conducting Raw Processing");
          //incase the of long shutter exposure and camera hasn't finished writing and it grabs the pic before and it turns out to be jpg
          if(dcraw.isRaw(filename)){
              //if(_usedarkframe && QFile::exists(_darkframe))
@@ -296,8 +297,8 @@ void QGphotoCamera::capture(int seconds){
 
              image = dcraw.getthumbimage(); //.loadFromData(*image);
          }
-     else{
-        qDebug("File isn't Raw!?");
+        else{
+            qDebug("File isn't Raw!?");
         }
      }
      else
@@ -307,6 +308,131 @@ void QGphotoCamera::capture(int seconds){
 
 
      emit image_captured(image);
+
+     if(_liveViewReady) initializeLiveView();
+}
+
+
+void QGphotoCamera::toggleLiveView(bool onoff){
+    if(onoff){
+        initializeLiveView();
+        _liveViewReady = true;
+    }
+    else{
+        endLiveView();
+        _liveViewReady = false;
+    }
+}
+
+
+void QGphotoCamera::initializeLiveView()
+{
+    if(_gpsettings["lvType"] == "canon"){
+        initializeCanonLV();
+    }
+}
+void QGphotoCamera::endLiveView()
+{
+    if(_gpsettings["lvType"] == "canon"){
+        endCanonLV();
+    }
+}
+
+
+void QGphotoCamera::initializeCanonLV(){
+    CameraWidget *widget = NULL;
+    int ret = gp_camera_get_config (_gpcamera, &widget, _gpcontext);
+    if (ret < GP_OK) {
+          qDebug(qPrintable(QString("camera_get_config failed: %0\n").arg(ret)));
+          return;
+    }
+
+
+    CameraWidget *child = NULL;
+    CameraWidgetType type;
+
+            ret=_lookup_widget(widget, "output", &child);
+
+
+    if(ret < GP_OK){
+        qDebug(qPrintable(QString("Couldn't find setting: %0").arg(ret)));
+        return;
+        }
+    QString value("PC");
+    char *val = value.toLatin1().data();
+
+    ret = gp_widget_set_value (child, val);
+    if (ret < GP_OK) {
+          qDebug(qPrintable(QString("could not set widget value: %0\n").arg(gp_result_as_string(ret))));
+          return;
+    }
+    /* This stores it on the camera again */
+    ret = gp_camera_set_config (_gpcamera, widget, _gpcontext);
+    if (ret < GP_OK) {
+          qDebug(qPrintable(QString("camera_set_config failed: %0\n").arg(ret)));
+          return;
+    }
+
+    gp_widget_free(widget);
+}
+
+void QGphotoCamera::endCanonLV(){
+    CameraWidget *widget = NULL;
+    int ret = gp_camera_get_config (_gpcamera, &widget, _gpcontext);
+    if (ret < GP_OK) {
+          qDebug(qPrintable(QString("camera_get_config failed: %0\n").arg(ret)));
+          return;
+    }
+
+
+    CameraWidget *child = NULL;
+    CameraWidgetType type;
+
+            ret=_lookup_widget(widget, "output", &child);
+
+
+    if(ret < GP_OK){
+        qDebug(qPrintable(QString("Couldn't find setting: %0").arg(ret)));
+        return;
+        }
+    QString value("TFT");
+    char *val = value.toLatin1().data();
+
+    ret = gp_widget_set_value (child, val);
+    if (ret < GP_OK) {
+          qDebug(qPrintable(QString("could not set widget value: %0\n").arg(gp_result_as_string(ret))));
+          return;
+    }
+    /* This stores it on the camera again */
+    ret = gp_camera_set_config (_gpcamera, widget, _gpcontext);
+    if (ret < GP_OK) {
+          qDebug(qPrintable(QString("camera_set_config failed: %0\n").arg(ret)));
+          return;
+    }
+
+    gp_widget_free(widget);
+}
+
+QPixmap *QGphotoCamera::getLiveViewImage(){
+    CameraFile *file;
+    char *data;
+    unsigned long datalen;
+
+    QMutexLocker locker(&_lvMutex);
+    gp_file_new(&file);
+
+    gp_camera_capture_preview(_gpcamera, file, _gpcontext);
+
+
+    gp_file_get_data_and_size(file,(const char**) &data, (unsigned long *)&datalen);
+    qDebug(qPrintable(QString("Data is %0 bytes").arg(datalen)));
+
+    QPixmap *pix = new QPixmap();
+    pix->loadFromData((const unsigned char *)data, datalen);
+    gp_file_free(file);
+
+    return pix;
+
 }
 
 int QGphotoCamera::_lookup_widget(CameraWidget*widget, const char *key, CameraWidget **child) {
@@ -315,6 +441,56 @@ int QGphotoCamera::_lookup_widget(CameraWidget*widget, const char *key, CameraWi
       if (ret < GP_OK)
             ret = gp_widget_get_child_by_label (widget, key, child);
       return ret;
+}
+
+void QGphotoCamera::getSettingsInfo(){
+        QFile file("gpcameras.xml");
+        bool open = file.open(QIODevice::ReadOnly | QIODevice::Text);
+        if (!open)
+        {
+            qDebug("Couldn't open file");
+            return;
+        }
+        else
+        {
+            qDebug("File opened OK");
+        }
+
+        QXmlStreamReader xml(&file);
+        qDebug(qPrintable(QString("Encoding: %0").arg(xml.documentEncoding().toString())));
+       bool modelFound = false;
+       while (!xml.atEnd() && !xml.hasError())
+        {
+            xml.readNext();
+            if (xml.isStartElement())
+            {
+                QXmlStreamAttributes atts = xml.attributes();
+                if(xml.name() == "camera" && atts.value("model") == _model){
+                    modelFound = true;
+                }
+                else if(xml.name() == "camera" && atts.value("model") != _model){
+                    modelFound = false;
+                }
+                if(xml.name() == "setting" && modelFound){
+                    QString txtValue = xml.readElementText();
+                    qDebug(qPrintable(QString("element name: '%0', text: '%1'").arg(xml.name().toString()).arg(txtValue)));
+                    qDebug(qPrintable(QString("id: %0").arg(atts.value("id").toString())));
+                    _gpsettings.insert(atts.value("id").toString(), txtValue);
+                }
+            }
+            else if(xml.isEndElement() && xml.name() == "camera" && modelFound){
+                break;
+            }
+            else if (xml.hasError())
+            {
+                qDebug(qPrintable(QString("XML error: %0").arg(xml.errorString())));
+            }
+            else if (xml.atEnd())
+            {
+                qDebug("Reached end, done");
+            }
+
+        }
 }
 
 
