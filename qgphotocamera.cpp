@@ -90,7 +90,7 @@ QCameraProperty *QGphotoCamera::gpconfigtocameraproperty(QString propName, char 
 //        if(strcmp(label, val) == 0){
 //                camProp->setCurrentValue(i);
 //            }
-        if(cret = GP_OK){
+        if(cret == GP_OK){
             qDebug(qPrintable(QString("choice is %0").arg(label)));
             camProp->appendValue(QString(label),QString(label));
         }
