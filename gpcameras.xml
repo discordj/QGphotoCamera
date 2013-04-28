@@ -16,5 +16,14 @@
         <setting id='imagequality'>imageformat</setting>
         <setting id='hasLiveView'>false</setting>
 </camera>
+<camera model='Nikon DSC D5200 (PTP mode)'>
+        <setting id='whitebalance'>whitebalance</setting>
+        <setting id='aperture'>f-number</setting>
+        <setting id='shutterspeed'>shutterspeed2</setting>
+        <setting id='iso'>iso</setting>
+        <setting id='imagequality'>imageformat</setting>
+        <setting id='hasLiveView'>true</setting>
+        <setting id='lvType'>nikon</setting>
+</camera>
 </cameras>
 
