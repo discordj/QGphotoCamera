@@ -26,7 +26,8 @@ public:
     void setbulbmode(bool bulb){}
     void startbulbexposure(){}
     void stopbulbexposure(){}
-    QImage getImage(){return QImage();}
+    QImage getImage();
+    QString getImageFile();
     QString identifier() {return QString("%1 (%2)").arg(_model).arg(_identifier); }
     QString model() { return _model;}
 
@@ -87,6 +88,7 @@ private:
     QMutex _lvMutex;
 
     QMap<QString,QString> _gpsettings;
+    QList<QString> _imageFiles;
 
     void getSettingsInfo();
     void initializeCanonLV();

@@ -271,7 +271,7 @@ void QGphotoCamera::capture(int seconds){
       }
      }
 
-
+     _imageFiles.append(filename);
      QImage image;
      if(isRaw)
      {
@@ -312,6 +312,43 @@ void QGphotoCamera::capture(int seconds){
      if(_liveViewReady) initializeLiveView();
 }
 
+QString QGphotoCamera::getImageFile(){
+    return _imageFiles.last();
+}
+
+QImage QGphotoCamera::getImage(){
+    QString filename = _imageFiles.last();
+    bool isRaw = false;
+    QStringList fileparts = filename.split('.');
+    if(fileparts[1].compare(".jpg") != 0)
+        isRaw = true;
+
+    QImage image;
+    if(isRaw)
+    {
+        //Do raw processing
+        DcRImage dcraw;
+        qDebug("Conducting Raw Processing");
+        //incase the of long shutter exposure and camera hasn't finished writing and it grabs the pic before and it turns out to be jpg
+        if(dcraw.isRaw(filename)){
+                dcraw.load(filename);
+
+            //QByteArray *image =dcraw.GetImage(previewFile.absoluteFilePath());
+
+            image = dcraw.getimage(); //.loadFromData(*image);
+        }
+       else{
+           qDebug("File isn't Raw!?");
+       }
+    }
+    else
+    {
+        image.load(filename);
+    }
+
+
+    return image;
+}
 
 void QGphotoCamera::toggleLiveView(bool onoff){
     if(onoff){
